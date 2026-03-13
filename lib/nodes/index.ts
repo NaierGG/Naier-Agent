@@ -541,4 +541,11 @@ export const NODE_DEFINITION_LIST: NodeDefinition[] = [
   }
 ];
 
-export type * from "@/lib/nodes/types";
+export type {
+  NodeCategory,
+  NodeConfigField,
+  NodeConfigFieldOption,
+  NodeConfigFieldType,
+  NodeDefinition,
+  NodeType
+} from "@/lib/nodes/types";
