@@ -1,0 +1,21 @@
+
+> stockflow-ai@0.1.0 dev
+> next dev --port 3001
+
+  ▲ Next.js 14.2.35
+  - Local:        http://localhost:3001
+  - Environments: .env
+
+ ✓ Starting...
+ ✓ Ready in 1634ms
+ ○ Compiling /middleware ...
+ ✓ Compiled /middleware in 1622ms (124 modules)
+ ○ Compiling / ...
+ ✓ Compiled / in 7.5s (542 modules)
+ GET / 200 in 7827ms
+ GET / 200 in 149ms
+ GET / 200 in 132ms
+ ○ Compiling /signup ...
+ ✓ Compiled /signup in 3.5s (703 modules)
+ ✓ Compiled in 398ms (349 modules)
+ ✓ Compiled in 223ms (349 modules)
