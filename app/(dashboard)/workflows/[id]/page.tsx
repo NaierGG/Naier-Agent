@@ -49,10 +49,10 @@ export default async function WorkflowDetailPage({
             Workflow Detail
           </p>
           <h1 className="mt-3 font-mono text-3xl font-semibold text-zinc-100">
-            워크플로우 상세
+            워크플로우 편집기
           </h1>
           <p className="mt-2 text-sm text-zinc-400">
-            상태를 관리하고, 노드별 단일 실행으로 동작을 바로 점검할 수 있습니다.
+            노드를 직접 배치하고 연결을 조정하면서 실행 흐름을 빠르게 검증해보세요.
           </p>
         </div>
       </div>

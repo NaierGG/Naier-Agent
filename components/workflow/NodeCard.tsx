@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { getNodeDefinition } from "@/lib/nodes/registry";
 import { cn } from "@/lib/utils/cn";
+import { formatDateTime } from "@/lib/utils/format";
 import type { WorkflowNode } from "@/types";
 
 type NodeTestResult = {
@@ -18,7 +19,6 @@ type NodeTestResult = {
 
 type NodeCardProps = {
   node: WorkflowNode;
-  isLast: boolean;
   isTesting: boolean;
   testResult?: NodeTestResult;
   onTest: (node: WorkflowNode, input?: unknown) => Promise<void>;
@@ -42,7 +42,7 @@ function summarizeConfig(config: Record<string, any>) {
   );
 
   if (entries.length === 0) {
-    return "설정 없음";
+    return "설정된 값이 없습니다.";
   }
 
   return entries.slice(0, 5).map(([key, value]) => ({
@@ -51,12 +51,7 @@ function summarizeConfig(config: Record<string, any>) {
   }));
 }
 
-export function NodeCard({
-  node,
-  isTesting,
-  testResult,
-  onTest
-}: NodeCardProps) {
+export function NodeCard({ node, isTesting, testResult, onTest }: NodeCardProps) {
   const [rawInput, setRawInput] = useState("");
   const [inputError, setInputError] = useState<string | null>(null);
   const definition = getNodeDefinition(node.type);
@@ -135,31 +130,36 @@ export function NodeCard({
       </div>
 
       {testResult ? (
-        <div className="mt-5 grid gap-4 xl:grid-cols-2">
-          <div>
-            <p className="mb-2 text-xs uppercase tracking-[0.18em] text-zinc-500">
-              Last Input
-            </p>
-            <pre className="overflow-x-auto rounded-2xl border border-white/5 bg-black/30 p-4 text-xs leading-6 text-zinc-300">
-              {formatJsonPreview(testResult.input) || "null"}
-            </pre>
-          </div>
-          <div>
-            <p className="mb-2 text-xs uppercase tracking-[0.18em] text-zinc-500">
-              Last Output
-            </p>
-            <pre
-              className={cn(
-                "overflow-x-auto rounded-2xl border p-4 text-xs leading-6",
-                testResult.error
-                  ? "border-rose-500/20 bg-rose-500/10 text-rose-200"
-                  : "border-white/5 bg-black/30 text-zinc-300"
-              )}
-            >
-              {testResult.error
-                ? testResult.error
-                : formatJsonPreview(testResult.output) || "null"}
-            </pre>
+        <div className="mt-5 space-y-4">
+          <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">
+            Last Tested · {formatDateTime(testResult.testedAt)}
+          </p>
+          <div className="grid gap-4 xl:grid-cols-2">
+            <div>
+              <p className="mb-2 text-xs uppercase tracking-[0.18em] text-zinc-500">
+                Last Input
+              </p>
+              <pre className="overflow-x-auto rounded-2xl border border-white/5 bg-black/30 p-4 text-xs leading-6 text-zinc-300">
+                {formatJsonPreview(testResult.input) || "null"}
+              </pre>
+            </div>
+            <div>
+              <p className="mb-2 text-xs uppercase tracking-[0.18em] text-zinc-500">
+                Last Output
+              </p>
+              <pre
+                className={cn(
+                  "overflow-x-auto rounded-2xl border p-4 text-xs leading-6",
+                  testResult.error
+                    ? "border-rose-500/20 bg-rose-500/10 text-rose-200"
+                    : "border-white/5 bg-black/30 text-zinc-300"
+                )}
+              >
+                {testResult.error
+                  ? testResult.error
+                  : formatJsonPreview(testResult.output) || "null"}
+              </pre>
+            </div>
           </div>
         </div>
       ) : null}
