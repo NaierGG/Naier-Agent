@@ -17,7 +17,7 @@ import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils/cn";
 import {
   formatRelativeTime,
-  formatWorkflowSchedule
+  formatWorkflowTrigger
 } from "@/lib/utils/format";
 import type { Workflow } from "@/types";
 
@@ -318,7 +318,7 @@ export function WorkflowList({ workflows }: WorkflowListProps) {
                     Schedule
                   </p>
                   <p className="mt-2 text-sm text-zinc-200">
-                    {formatWorkflowSchedule(workflow.schedule_cron)}
+                    {formatWorkflowTrigger(workflow)}
                   </p>
                 </div>
                 <div className="rounded-2xl border border-white/5 bg-black/15 px-4 py-3">

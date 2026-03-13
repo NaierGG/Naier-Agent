@@ -49,7 +49,7 @@ export async function POST(request: Request) {
         },
         body: JSON.stringify({
           chat_id: mergedKeys.telegram_chat_id,
-          text: "\u2705 StockFlow AI \uD154\uB808\uADF8\uB7A8 \uC5F0\uACB0 \uD14C\uC2A4\uD2B8 \uC131\uACF5!",
+          text: "\u2705 Naier \uD154\uB808\uADF8\uB7A8 \uC5F0\uACB0 \uD14C\uC2A4\uD2B8 \uC131\uACF5!",
           parse_mode: "Markdown"
         })
       }

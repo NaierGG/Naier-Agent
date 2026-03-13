@@ -103,7 +103,10 @@ function ensureTriggerNode(
   scheduleCron: string | null
 ): WorkflowNode[] {
   const hasTrigger = nodes.some(
-    (node) => node.type === "trigger_schedule" || node.type === "trigger_manual"
+    (node) =>
+      node.type === "trigger_schedule" ||
+      node.type === "trigger_manual" ||
+      node.type === "trigger_webhook"
   );
 
   if (hasTrigger) {

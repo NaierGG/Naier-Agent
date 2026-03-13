@@ -40,7 +40,7 @@ export function AuthShell({
                 },
                 {
                   label: "\uBC30\uD3EC",
-                  value: "Vercel Ready"
+                  value: "Netlify Ready"
                 }
               ].map((item) => (
                 <div

@@ -3,7 +3,6 @@ import {
   Home,
   LogOut,
   Settings,
-  Sparkles,
   Zap
 } from "lucide-react";
 
@@ -53,16 +52,13 @@ export function Sidebar({
       <Link
         href="/dashboard"
         onClick={onNavigate}
-        className="flex items-center gap-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-4"
+        className="rounded-2xl border border-white/10 bg-black/20 px-4 py-4"
       >
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#00d4aa]/15 text-[#00d4aa]">
-          <Sparkles className="h-5 w-5" />
-        </div>
         <div>
           <p className="font-mono text-base font-semibold text-[#e5e5e5]">
-            StockFlow AI
+            Naier
           </p>
-          <p className="text-xs text-zinc-500">Automation Builder</p>
+          <p className="text-xs text-zinc-500">Automation Workspace</p>
         </div>
       </Link>
 

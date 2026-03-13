@@ -18,6 +18,7 @@ import type {
 const CRITICAL_NODE_TYPES = new Set<NodeType>([
   "trigger_schedule",
   "trigger_manual",
+  "trigger_webhook",
   "dart_news",
   "naver_stock_news",
   "korea_stock_price"
@@ -273,7 +274,11 @@ function normalizeExecutionInput(
   input: unknown,
   triggerPayload: Record<string, unknown>
 ) {
-  if (node.type === "trigger_schedule" || node.type === "trigger_manual") {
+  if (
+    node.type === "trigger_schedule" ||
+    node.type === "trigger_manual" ||
+    node.type === "trigger_webhook"
+  ) {
     return triggerPayload;
   }
 
@@ -1013,9 +1018,11 @@ async function executeNode(
   switch (node.type) {
     case "trigger_schedule":
     case "trigger_manual":
+    case "trigger_webhook":
       return {
         triggered_at: new Date().toISOString(),
-        trigger_type: triggerType
+        trigger_type: triggerType,
+        ...(isRecord(input) ? input : {})
       };
     case "dart_news":
       return executeDartNewsNode(node, userApiKeys);
@@ -1087,7 +1094,10 @@ export async function executeWorkflow(
   workflowId: string,
   userId: string,
   triggerType: WorkflowTriggerType,
-  supabaseServiceClient: SupabaseClient
+  supabaseServiceClient: SupabaseClient,
+  options?: {
+    triggerPayload?: Record<string, unknown>;
+  }
 ): Promise<WorkflowExecution> {
   let executionId: string | null = null;
   let workflow: WorkflowRecord | null = null;
@@ -1146,7 +1156,8 @@ export async function executeWorkflow(
     const nodeOutputs = new Map<string, unknown>();
     const triggerPayload = {
       triggered_at: startedAt,
-      trigger_type: triggerType
+      trigger_type: triggerType,
+      ...(options?.triggerPayload || {})
     };
 
     for (const node of orderedNodes) {

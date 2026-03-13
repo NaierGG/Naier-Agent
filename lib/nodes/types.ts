@@ -29,6 +29,7 @@ export interface NodeConfigField {
 export type NodeType =
   | "trigger_schedule"
   | "trigger_manual"
+  | "trigger_webhook"
   | "dart_news"
   | "naver_stock_news"
   | "korea_stock_price"

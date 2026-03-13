@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { ChevronRight, LoaderCircle, Play } from "lucide-react";
 
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { getNodeDefinition } from "@/lib/nodes/registry";
 import { cn } from "@/lib/utils/cn";
 import type { WorkflowNode } from "@/types";
@@ -75,7 +75,7 @@ export function NodeCard({
       const parsedInput = JSON.parse(rawInput);
       await onTest(node, parsedInput);
     } catch {
-      setInputError("테스트 입력 JSON 형식이 올바르지 않습니다.");
+      setInputError("테스트 입력은 JSON 형식이어야 합니다.");
     }
   }
 
@@ -109,24 +109,20 @@ export function NodeCard({
             ) : (
               <Play className="h-4 w-4" />
             )}
-            단일 실행
+            단건 실행
           </Button>
         </div>
 
         <div className="mt-5 grid gap-3 md:grid-cols-2">
           <div className="rounded-2xl border border-white/5 bg-black/15 p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">
-              Node Type
-            </p>
+            <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">Node Type</p>
             <p className="mt-2 text-sm text-zinc-200">
               {definition.label} · {node.type}
             </p>
           </div>
 
           <div className="rounded-2xl border border-white/5 bg-black/15 p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">
-              Position
-            </p>
+            <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">Position</p>
             <p className="mt-2 text-sm text-zinc-200">
               x: {Math.round(node.position.x)} / y: {Math.round(node.position.y)}
             </p>

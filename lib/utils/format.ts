@@ -1,3 +1,5 @@
+import type { Workflow } from "@/types";
+
 const RELATIVE_TIME_DIVISIONS = [
   { amount: 60, unit: "second" as const },
   { amount: 60, unit: "minute" as const },
@@ -160,13 +162,13 @@ export function getDurationMs(
 
 export function formatWorkflowSchedule(scheduleCron: string | null | undefined) {
   if (!scheduleCron) {
-    return "🔘 수동 실행";
+    return "수동 실행";
   }
 
   const cronParts = scheduleCron.trim().split(/\s+/);
 
   if (cronParts.length !== 5) {
-    return `⏰ Cron ${scheduleCron}`;
+    return `Cron ${scheduleCron}`;
   }
 
   const [minuteRaw, hourRaw, dayOfMonth, month, dayOfWeek] = cronParts;
@@ -181,12 +183,50 @@ export function formatWorkflowSchedule(scheduleCron: string | null | undefined) 
     month === "*" &&
     dayOfWeekLabel
   ) {
-    return `⏰ ${dayOfWeekLabel} ${formatHourMinute(hour, minute)}`;
+    return `${dayOfWeekLabel} ${formatHourMinute(hour, minute)}`;
   }
 
   if (!Number.isNaN(hour) && !Number.isNaN(minute)) {
-    return `⏰ ${formatHourMinute(hour, minute)} · Cron ${scheduleCron}`;
+    return `${formatHourMinute(hour, minute)} · Cron ${scheduleCron}`;
   }
 
-  return `⏰ Cron ${scheduleCron}`;
+  return `Cron ${scheduleCron}`;
+}
+
+export function getWorkflowPrimaryTrigger(
+  workflow: Pick<Workflow, "nodes" | "schedule_cron">
+) {
+  const triggerNode = (workflow.nodes || []).find((node) =>
+    node.type.startsWith("trigger_")
+  );
+
+  if (triggerNode?.type === "trigger_webhook") {
+    return "webhook";
+  }
+
+  if (triggerNode?.type === "trigger_manual") {
+    return "manual";
+  }
+
+  if (triggerNode?.type === "trigger_schedule" || workflow.schedule_cron) {
+    return "schedule";
+  }
+
+  return "manual";
+}
+
+export function formatWorkflowTrigger(
+  workflow: Pick<Workflow, "nodes" | "schedule_cron">
+) {
+  const triggerType = getWorkflowPrimaryTrigger(workflow);
+
+  if (triggerType === "webhook") {
+    return "웹훅 호출 시 실행";
+  }
+
+  if (triggerType === "manual") {
+    return "수동 실행";
+  }
+
+  return formatWorkflowSchedule(workflow.schedule_cron);
 }

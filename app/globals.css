@@ -37,7 +37,8 @@
   body {
     @apply bg-background text-foreground font-sans antialiased;
     background-image:
-      radial-gradient(circle at top, rgba(0, 212, 170, 0.08), transparent 35%),
+      radial-gradient(circle at top, rgba(24, 196, 255, 0.08), transparent 32%),
+      radial-gradient(circle at 80% 0%, rgba(16, 185, 129, 0.06), transparent 28%),
       linear-gradient(to bottom, rgba(255, 255, 255, 0.015), transparent 30%);
   }
 
@@ -54,47 +55,49 @@
     background-size: 32px 32px;
   }
 
-  .landing-shell {
+  .naier-shell {
     background-color: #050505;
     background-image:
-      radial-gradient(circle at 15% 15%, rgba(0, 212, 170, 0.18), transparent 26%),
-      radial-gradient(circle at 85% 20%, rgba(255, 107, 53, 0.12), transparent 22%),
-      linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 24%);
+      radial-gradient(circle at 10% 12%, rgba(24, 196, 255, 0.14), transparent 24%),
+      radial-gradient(circle at 86% 18%, rgba(16, 185, 129, 0.12), transparent 22%),
+      radial-gradient(circle at 55% 120%, rgba(139, 92, 246, 0.08), transparent 24%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.018), transparent 24%);
   }
 
-  .landing-grid {
+  .naier-grid {
     background-image:
-      linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
-    background-size: 44px 44px;
+      linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    background-size: 56px 56px;
   }
 
-  .landing-panel {
+  .naier-panel {
     background:
-      linear-gradient(180deg, rgba(18, 18, 18, 0.96), rgba(8, 8, 8, 0.92));
-    border: 1px solid rgba(255, 255, 255, 0.08);
+      linear-gradient(180deg, rgba(12, 18, 24, 0.94), rgba(6, 10, 15, 0.92));
+    border: 1px solid rgba(255, 255, 255, 0.07);
     box-shadow:
-      0 28px 100px rgba(0, 0, 0, 0.48),
+      0 28px 100px rgba(0, 0, 0, 0.45),
       inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    backdrop-filter: blur(18px);
   }
 
-  .landing-glow {
+  .naier-glow {
     box-shadow:
-      0 0 0 1px rgba(0, 212, 170, 0.12),
-      0 36px 120px rgba(0, 0, 0, 0.54);
+      0 0 0 1px rgba(24, 196, 255, 0.1),
+      0 40px 120px rgba(0, 0, 0, 0.5);
   }
 
-  .landing-fade-up {
-    animation: landing-fade-up 0.9s cubic-bezier(0.2, 0.9, 0.2, 1) both;
-    animation-delay: var(--landing-delay, 0ms);
+  .naier-fade-up {
+    animation: naier-fade-up 0.9s cubic-bezier(0.2, 0.9, 0.2, 1) both;
+    animation-delay: var(--naier-delay, 0ms);
   }
 
-  .landing-type-stack {
+  .naier-command-stack {
     position: relative;
-    min-height: 5.75rem;
+    min-height: 6rem;
   }
 
-  .landing-type-line {
+  .naier-command-line {
     position: absolute;
     inset: 0 auto auto 0;
     display: inline-block;
@@ -103,19 +106,15 @@
     white-space: nowrap;
     width: 0;
     opacity: 0;
-    border-right: 2px solid rgba(0, 212, 170, 0.9);
+    border-right: 2px solid rgba(186, 230, 253, 0.95);
     animation:
-      landing-typewriter 12s steps(42, end) infinite,
-      landing-caret 0.9s step-end infinite;
-    animation-delay: calc(var(--line-index, 0) * 4s), 0s;
-  }
-
-  .landing-scan {
-    animation: landing-scan 6s linear infinite;
+      naier-command-cycle 12s steps(44, end) infinite,
+      naier-caret 0.9s step-end infinite;
+    animation-delay: calc(var(--naier-line-index, 0) * 4s), 0s;
   }
 }
 
-@keyframes landing-typewriter {
+@keyframes naier-command-cycle {
   0%,
   6% {
     width: 0;
@@ -139,10 +138,10 @@
   }
 }
 
-@keyframes landing-caret {
+@keyframes naier-caret {
   0%,
   49% {
-    border-color: rgba(0, 212, 170, 0.9);
+    border-color: rgba(186, 230, 253, 0.95);
   }
 
   50%,
@@ -151,24 +150,7 @@
   }
 }
 
-@keyframes landing-scan {
-  0% {
-    transform: translateY(-12%);
-    opacity: 0;
-  }
-
-  10%,
-  90% {
-    opacity: 1;
-  }
-
-  100% {
-    transform: translateY(420%);
-    opacity: 0;
-  }
-}
-
-@keyframes landing-fade-up {
+@keyframes naier-fade-up {
   from {
     opacity: 0;
     transform: translateY(24px);
@@ -181,19 +163,18 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .landing-fade-up,
-  .landing-type-line,
-  .landing-scan {
+  .naier-fade-up,
+  .naier-command-line {
     animation: none !important;
   }
 
-  .landing-type-stack {
+  .naier-command-stack {
     min-height: auto;
     display: grid;
     gap: 0.75rem;
   }
 
-  .landing-type-line {
+  .naier-command-line {
     position: static;
     width: auto;
     opacity: 1;

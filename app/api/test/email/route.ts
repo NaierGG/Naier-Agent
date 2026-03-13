@@ -60,9 +60,9 @@ export async function POST(request: Request) {
     await transporter.sendMail({
       from: mergedKeys.email_smtp_user,
       to: mergedKeys.email_to,
-      subject: "StockFlow AI \uC774\uBA54\uC77C \uC5F0\uACB0 \uD14C\uC2A4\uD2B8",
-      text: "\u2705 StockFlow AI \uC774\uBA54\uC77C \uC5F0\uACB0 \uD14C\uC2A4\uD2B8\uAC00 \uC131\uACF5\uD588\uC2B5\uB2C8\uB2E4.",
-      html: "<p>\u2705 <strong>StockFlow AI</strong> \uC774\uBA54\uC77C \uC5F0\uACB0 \uD14C\uC2A4\uD2B8\uAC00 \uC131\uACF5\uD588\uC2B5\uB2C8\uB2E4.</p>"
+      subject: "Naier \uC774\uBA54\uC77C \uC5F0\uACB0 \uD14C\uC2A4\uD2B8",
+      text: "\u2705 Naier \uC774\uBA54\uC77C \uC5F0\uACB0 \uD14C\uC2A4\uD2B8\uAC00 \uC131\uACF5\uD588\uC2B5\uB2C8\uB2E4.",
+      html: "<p>\u2705 <strong>Naier</strong> \uC774\uBA54\uC77C \uC5F0\uACB0 \uD14C\uC2A4\uD2B8\uAC00 \uC131\uACF5\uD588\uC2B5\uB2C8\uB2E4.</p>"
     });
 
     return NextResponse.json({

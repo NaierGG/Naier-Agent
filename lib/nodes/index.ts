@@ -52,6 +52,53 @@ export const NODE_DEFINITION_LIST: NodeDefinition[] = [
     }
   },
   {
+    type: "trigger_webhook",
+    label: "\uC6F9\uD6C5 \uD2B8\uB9AC\uAC70",
+    description: "\uC678\uBD80 \uC694\uCCAD(GET/POST)\uC774 \uB4E4\uC5B4\uC624\uBA74 \uBC14\uB85C \uC2E4\uD589\uB429\uB2C8\uB2E4.",
+    icon: "\uD83E\uDE9D",
+    category: "trigger",
+    configSchema: [
+      {
+        key: "webhook_secret",
+        label: "Webhook Secret",
+        type: "text",
+        required: true,
+        placeholder: "naier-webhook-secret"
+      },
+      {
+        key: "accept_method",
+        label: "\uD5C8\uC6A9 Method",
+        type: "select",
+        required: true,
+        defaultValue: "POST",
+        options: [
+          {
+            label: "POST",
+            value: "POST"
+          },
+          {
+            label: "GET",
+            value: "GET"
+          },
+          {
+            label: "ANY",
+            value: "ANY"
+          }
+        ]
+      }
+    ],
+    outputExample: {
+      triggered_at: "2026-03-13T09:00:00.000Z",
+      trigger_type: "webhook",
+      webhook: {
+        method: "POST",
+        query: {
+          market: "kospi"
+        }
+      }
+    }
+  },
+  {
     type: "dart_news",
     label: "DART \uACF5\uC2DC \uC218\uC9D1",
     description: "\uAE08\uC735\uAC10\uB3C5\uC6D0 DART\uC5D0\uC11C \uAE30\uC5C5 \uACF5\uC2DC\uB97C \uAC00\uC838\uC635\uB2C8\uB2E4.",
@@ -426,7 +473,7 @@ export const NODE_DEFINITION_LIST: NodeDefinition[] = [
         type: "textarea",
         required: true,
         defaultValue:
-          "\uD83D\uDCCA *StockFlow \uC54C\uB9BC*\n\n{{#each items}}\u2022 {{this.title}}\n{{/each}}"
+          "\uD83D\uDCE1 *Naier \uC54C\uB9BC*\n\n{{#each items}}\u2022 {{this.title}}\n{{/each}}"
       },
       {
         key: "parse_mode",
@@ -481,7 +528,7 @@ export const NODE_DEFINITION_LIST: NodeDefinition[] = [
         label: "Username",
         type: "text",
         required: false,
-        placeholder: "StockFlow Bot"
+        placeholder: "Naier Bot"
       },
       {
         key: "embed_color",
@@ -536,7 +583,7 @@ export const NODE_DEFINITION_LIST: NodeDefinition[] = [
     ],
     outputExample: {
       sent: true,
-      messageId: "<stockflow@example.com>"
+      messageId: "<naier@example.com>"
     }
   }
 ];

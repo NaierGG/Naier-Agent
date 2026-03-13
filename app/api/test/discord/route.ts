@@ -46,7 +46,7 @@ export async function POST(request: Request) {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        content: "\u2705 StockFlow AI \uB514\uC2A4\uCF54\uB4DC \uC5F0\uACB0 \uD14C\uC2A4\uD2B8 \uC131\uACF5!"
+        content: "\u2705 Naier \uB514\uC2A4\uCF54\uB4DC \uC5F0\uACB0 \uD14C\uC2A4\uD2B8 \uC131\uACF5!"
       })
     });
 

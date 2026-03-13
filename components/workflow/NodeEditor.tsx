@@ -3,7 +3,15 @@
 import Link from "next/link";
 import { startTransition, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { FileText, LoaderCircle, Play, Power, Trash2 } from "lucide-react";
+import {
+  Copy,
+  FileText,
+  LoaderCircle,
+  Play,
+  Power,
+  Trash2,
+  Webhook
+} from "lucide-react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import { NodeCard } from "@/components/workflow/NodeCard";
@@ -11,7 +19,7 @@ import { cn } from "@/lib/utils/cn";
 import {
   formatDateTime,
   formatRelativeTime,
-  formatWorkflowSchedule
+  formatWorkflowTrigger
 } from "@/lib/utils/format";
 import type { Workflow, WorkflowNode } from "@/types";
 
@@ -55,6 +63,10 @@ function sortNodes(nodes: WorkflowNode[]) {
   });
 }
 
+function getWebhookNode(workflow: Workflow) {
+  return (workflow.nodes || []).find((node) => node.type === "trigger_webhook") || null;
+}
+
 export function NodeEditor({ workflow }: WorkflowEditorProps) {
   const router = useRouter();
   const [currentWorkflow, setCurrentWorkflow] = useState(workflow);
@@ -67,6 +79,30 @@ export function NodeEditor({ workflow }: WorkflowEditorProps) {
     () => sortNodes(currentWorkflow.nodes || []),
     [currentWorkflow.nodes]
   );
+  const webhookNode = useMemo(() => getWebhookNode(currentWorkflow), [currentWorkflow]);
+  const webhookDetails = useMemo(() => {
+    if (!webhookNode) {
+      return null;
+    }
+
+    const relativePath = `/api/workflows/${currentWorkflow.id}/webhook`;
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const absoluteUrl = origin ? `${origin}${relativePath}` : relativePath;
+    const secret = String(webhookNode.config?.webhook_secret || "").trim();
+    const method = String(webhookNode.config?.accept_method || "POST")
+      .trim()
+      .toUpperCase();
+
+    return {
+      absoluteUrl,
+      method,
+      secret,
+      curlCommand:
+        method === "GET"
+          ? `curl "${absoluteUrl}?secret=${secret}&symbol=005930"`
+          : `curl -X POST "${absoluteUrl}" -H "Content-Type: application/json" -H "x-naier-webhook-secret: ${secret}" -d "{\\"symbol\\":\\"005930\\"}"`
+    };
+  }, [currentWorkflow.id, webhookNode]);
 
   useEffect(() => {
     setCurrentWorkflow(workflow);
@@ -80,6 +116,21 @@ export function NodeEditor({ workflow }: WorkflowEditorProps) {
     const timeout = window.setTimeout(() => setNotice(null), 3200);
     return () => window.clearTimeout(timeout);
   }, [notice]);
+
+  async function handleCopy(value: string, successMessage: string) {
+    try {
+      await navigator.clipboard.writeText(value);
+      setNotice({
+        type: "success",
+        message: successMessage
+      });
+    } catch {
+      setNotice({
+        type: "error",
+        message: "클립보드 복사에 실패했습니다."
+      });
+    }
+  }
 
   async function handleExecute() {
     setPendingAction("execute");
@@ -106,9 +157,7 @@ export function NodeEditor({ workflow }: WorkflowEditorProps) {
       setNotice({
         type: "error",
         message:
-          error instanceof Error
-            ? error.message
-            : "워크플로우 실행에 실패했습니다."
+          error instanceof Error ? error.message : "워크플로우 실행에 실패했습니다."
       });
     } finally {
       setPendingAction(null);
@@ -145,8 +194,7 @@ export function NodeEditor({ workflow }: WorkflowEditorProps) {
     } catch (error) {
       setNotice({
         type: "error",
-        message:
-          error instanceof Error ? error.message : "상태 변경에 실패했습니다."
+        message: error instanceof Error ? error.message : "상태 변경에 실패했습니다."
       });
     } finally {
       setPendingAction(null);
@@ -179,8 +227,7 @@ export function NodeEditor({ workflow }: WorkflowEditorProps) {
     } catch (error) {
       setNotice({
         type: "error",
-        message:
-          error instanceof Error ? error.message : "워크플로우 삭제에 실패했습니다."
+        message: error instanceof Error ? error.message : "워크플로우 삭제에 실패했습니다."
       });
     } finally {
       setPendingAction(null);
@@ -199,7 +246,7 @@ export function NodeEditor({ workflow }: WorkflowEditorProps) {
         body: JSON.stringify({
           node,
           input,
-          triggerType: "manual"
+          triggerType: node.type === "trigger_webhook" ? "webhook" : "manual"
         })
       });
       const result = await response.json();
@@ -225,17 +272,14 @@ export function NodeEditor({ workflow }: WorkflowEditorProps) {
         ...current,
         [node.id]: {
           input,
-          error:
-            error instanceof Error ? error.message : "단일 노드 실행에 실패했습니다.",
+          error: error instanceof Error ? error.message : "단일 노드 실행에 실패했습니다.",
           testedAt: new Date().toISOString()
         }
       }));
       setNotice({
         type: "error",
         message:
-          error instanceof Error
-            ? error.message
-            : "단일 노드 실행에 실패했습니다."
+          error instanceof Error ? error.message : "단일 노드 실행에 실패했습니다."
       });
     } finally {
       setTestingNodeId(null);
@@ -264,9 +308,7 @@ export function NodeEditor({ workflow }: WorkflowEditorProps) {
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <div className="flex flex-wrap items-center gap-3">
-                <h2 className="font-mono text-2xl text-zinc-100">
-                  {currentWorkflow.name}
-                </h2>
+                <h2 className="font-mono text-2xl text-zinc-100">{currentWorkflow.name}</h2>
                 <span
                   className={cn(
                     "rounded-full px-3 py-1 text-xs font-medium",
@@ -331,17 +373,13 @@ export function NodeEditor({ workflow }: WorkflowEditorProps) {
 
           <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             <div className="rounded-2xl border border-white/5 bg-black/15 px-4 py-3">
-              <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">
-                Schedule
-              </p>
+              <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">Trigger</p>
               <p className="mt-2 text-sm text-zinc-200">
-                {formatWorkflowSchedule(currentWorkflow.schedule_cron)}
+                {formatWorkflowTrigger(currentWorkflow)}
               </p>
             </div>
             <div className="rounded-2xl border border-white/5 bg-black/15 px-4 py-3">
-              <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">
-                Last Run
-              </p>
+              <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">Last Run</p>
               <p className="mt-2 text-sm text-zinc-200">
                 {currentWorkflow.last_executed_at
                   ? formatRelativeTime(currentWorkflow.last_executed_at)
@@ -349,23 +387,91 @@ export function NodeEditor({ workflow }: WorkflowEditorProps) {
               </p>
             </div>
             <div className="rounded-2xl border border-white/5 bg-black/15 px-4 py-3">
-              <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">
-                Updated
-              </p>
+              <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">Updated</p>
               <p className="mt-2 text-sm text-zinc-200">
                 {formatDateTime(currentWorkflow.updated_at)}
               </p>
             </div>
             <div className="rounded-2xl border border-white/5 bg-black/15 px-4 py-3">
-              <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">
-                Graph
-              </p>
+              <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">Graph</p>
               <p className="mt-2 text-sm text-zinc-200">
                 {currentWorkflow.nodes.length}개 노드 / {currentWorkflow.edges.length}개 연결
               </p>
             </div>
           </div>
         </div>
+
+        {webhookDetails ? (
+          <div className="rounded-3xl border border-cyan-300/15 bg-cyan-300/6 p-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <div className="flex items-center gap-3 text-cyan-100">
+                  <Webhook className="h-5 w-5" />
+                  <p className="font-mono text-sm uppercase tracking-[0.24em]">
+                    Webhook Trigger
+                  </p>
+                </div>
+                <p className="mt-3 text-sm leading-7 text-zinc-300">
+                  외부 시스템에서 이 URL을 호출하면 현재 워크플로우가 즉시 실행됩니다.
+                </p>
+              </div>
+
+              <Button
+                variant="outline"
+                onClick={() =>
+                  void handleCopy(webhookDetails.absoluteUrl, "웹훅 URL을 복사했습니다.")
+                }
+              >
+                <Copy className="h-4 w-4" />
+                URL 복사
+              </Button>
+            </div>
+
+            <div className="mt-6 grid gap-4 xl:grid-cols-3">
+              <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
+                <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">Endpoint</p>
+                <p className="mt-3 break-all text-sm leading-7 text-zinc-100">
+                  {webhookDetails.absoluteUrl}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
+                <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">
+                  Allowed Method
+                </p>
+                <p className="mt-3 text-sm text-zinc-100">{webhookDetails.method}</p>
+              </div>
+              <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
+                <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">
+                  Secret Header
+                </p>
+                <p className="mt-3 break-all text-sm text-zinc-100">
+                  x-naier-webhook-secret: {webhookDetails.secret}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4 rounded-2xl border border-white/8 bg-black/30 p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">
+                  Sample cURL
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    void handleCopy(webhookDetails.curlCommand, "샘플 cURL을 복사했습니다.")
+                  }
+                >
+                  <Copy className="h-4 w-4" />
+                  cURL 복사
+                </Button>
+              </div>
+              <pre className="mt-3 overflow-x-auto text-xs leading-6 text-zinc-300">
+                {webhookDetails.curlCommand}
+              </pre>
+            </div>
+          </div>
+        ) : null}
 
         {orderedNodes.length > 0 ? (
           <div className="space-y-5">
@@ -382,7 +488,7 @@ export function NodeEditor({ workflow }: WorkflowEditorProps) {
           </div>
         ) : (
           <div className="rounded-3xl border border-dashed border-white/10 bg-[#111111] px-6 py-12 text-center text-sm text-zinc-400">
-            아직 노드가 없습니다. AI 빌더에서 워크플로우를 다시 생성해보세요.
+            아직 노드가 없습니다. AI 빌더에서 워크플로우를 다시 생성해 보세요.
           </div>
         )}
       </div>

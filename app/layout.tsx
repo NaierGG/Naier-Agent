@@ -20,9 +20,9 @@ const ibmPlexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "StockFlow AI",
+  title: "Naier",
   description:
-    "\uD55C\uAD6D \uD22C\uC790\uC790\uB97C \uC704\uD55C \uC8FC\uC2DD \uC790\uB3D9\uD654 AI \uC5D0\uC774\uC804\uD2B8 \uBE4C\uB354"
+    "한국 투자자를 위한 AI 자동화 워크스페이스"
 };
 
 export default function RootLayout({
