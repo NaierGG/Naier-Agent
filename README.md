@@ -1,14 +1,14 @@
 # StockFlow AI
 
-주식 자동화 AI 에이전트 빌더입니다. 한국 개인투자자가 자연어 또는 워크플로우 UI로 자동화를 만들고, 본인 API 키(BYOK)로 실행할 수 있도록 설계했습니다.
+한국 개인투자자를 위한 주식 자동화 AI 에이전트 빌더입니다. 자연어와 워크플로우 UI로 자동화를 만들고, 본인 API 키(BYOK)로 실행하도록 설계되어 있습니다.
 
 ## 1. 프로젝트 소개
 
-- Next.js 14 App Router 기반 SaaS 구조
+- Next.js 14 App Router 기반 SaaS
 - Supabase Auth + PostgreSQL + RLS
 - Gemini 기반 워크플로우 생성
-- 사용자 본인 API 키로 실행되는 BYOK 모델
-- Vercel Cron 기반 스케줄 실행
+- 사용자 API 키 직접 사용(BYOK)
+- Netlify 배포 + Scheduled Function 기반 주기 실행
 
 ## 2. 로컬 개발 환경 세팅
 
@@ -44,31 +44,33 @@ npm run dev
 5. Auth에서 Email 로그인과 Google OAuth를 활성화합니다.
 6. Redirect URL에 로컬 주소와 배포 주소를 등록합니다.
    - `http://localhost:3000/api/auth/callback`
-   - `https://your-app.vercel.app/api/auth/callback`
+   - `https://your-netlify-site.netlify.app/api/auth/callback`
 
-## 4. Vercel 배포 방법
+## 4. Netlify 배포 방법
 
-1. GitHub 저장소를 Vercel에 Import 합니다.
-2. Framework Preset은 Next.js로 둡니다.
-3. 환경변수를 Vercel Project Settings에 등록합니다.
-4. 배포 후 Cron Job이 활성화되도록 [vercel.json](C:/Users/KANG%20HEE/OneDrive/%EC%BD%94%EB%94%A9/AI%20Agent/vercel.json)을 함께 반영합니다.
-5. `CRON_SECRET`를 Vercel 환경변수에도 동일하게 등록합니다.
+1. GitHub 저장소를 Netlify에 Import 합니다.
+2. Framework는 Next.js로 자동 감지되도록 둡니다.
+3. 배포 설정은 아래처럼 둡니다.
+   - Build command: `npm run build`
+   - Publish directory: `.next`
+4. 환경변수를 Netlify Site settings > Environment variables에 등록합니다.
+5. 배포 후 실제 사이트 주소를 `NEXT_PUBLIC_APP_URL` 값과 Supabase Redirect URL에 반영합니다.
+6. Scheduled Function은 [netlify/functions/cron-run.ts](C:/Users/KANG%20HEE/OneDrive/%EC%BD%94%EB%94%A9/AI%20Agent/netlify/functions/cron-run.ts)와 [netlify.toml](C:/Users/KANG%20HEE/OneDrive/%EC%BD%94%EB%94%A9/AI%20Agent/netlify.toml)을 통해 매분 실행되도록 설정되어 있습니다.
 
 ## 5. 환경변수 설정 가이드
-
-필수 환경변수는 아래 5개입니다.
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
 SUPABASE_SERVICE_ROLE_KEY=eyJ...
-NEXT_PUBLIC_APP_URL=https://your-app.vercel.app
+NEXT_PUBLIC_APP_URL=https://your-site.netlify.app
 CRON_SECRET=generate-random-string-here
 ```
 
 주의:
 - AI API 키는 서버 환경변수에 넣지 않습니다.
 - Gemini, DART, Telegram, Discord, SMTP 정보는 각 사용자가 설정 화면에서 직접 입력합니다.
+- `CRON_SECRET`은 Netlify Scheduled Function보다 외부 수동 호출용 `/api/cron/run` 보호에 주로 사용됩니다.
 
 ## 6. 첫 워크플로우 만들기 가이드
 
@@ -87,4 +89,5 @@ CRON_SECRET=generate-random-string-here
 ## 참고
 
 - 파일 업로드용 Supabase Storage 설정은 현재 프로젝트에서 필요하지 않습니다.
-- Cron 스케줄은 [app/api/cron/run/route.ts](C:/Users/KANG%20HEE/OneDrive/%EC%BD%94%EB%94%A9/AI%20Agent/app/api/cron/run/route.ts)에서 `CRON_SECRET` 인증 후 실행됩니다.
+- 수동 또는 외부 호출이 필요하면 [app/api/cron/run/route.ts](C:/Users/KANG%20HEE/OneDrive/%EC%BD%94%EB%94%A9/AI%20Agent/app/api/cron/run/route.ts)를 사용할 수 있습니다.
+- Netlify 배포 핵심 설정은 [netlify.toml](C:/Users/KANG%20HEE/OneDrive/%EC%BD%94%EB%94%A9/AI%20Agent/netlify.toml)에 있습니다.
