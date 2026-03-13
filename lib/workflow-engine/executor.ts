@@ -1042,6 +1042,34 @@ async function executeNode(
   }
 }
 
+export async function executeSingleNode({
+  node,
+  input,
+  userId,
+  supabaseServiceClient,
+  triggerType = "manual"
+}: {
+  node: WorkflowNode;
+  input?: unknown;
+  userId: string;
+  supabaseServiceClient: SupabaseClient;
+  triggerType?: WorkflowTriggerType;
+}) {
+  const userApiKeys =
+    (await getStoredUserApiKeys(supabaseServiceClient, userId)) || {};
+  const triggerPayload = {
+    triggered_at: new Date().toISOString(),
+    trigger_type: triggerType
+  };
+  const normalizedInput = normalizeExecutionInput(node, input, triggerPayload);
+  const output = await executeNode(node, normalizedInput, userApiKeys, triggerType);
+
+  return {
+    input: truncateForLog(normalizedInput),
+    output: truncateForLog(output)
+  };
+}
+
 async function updateExecutionLogs(
   supabaseServiceClient: SupabaseClient,
   executionId: string,
