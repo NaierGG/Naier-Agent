@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Mono, Inter } from "next/font/google";
+import { IBM_Plex_Mono, Noto_Sans_KR } from "next/font/google";
 import type { ReactNode } from "react";
 import "./globals.css";
 
 import { cn } from "@/lib/utils/cn";
 
-const inter = Inter({
+const notoSansKr = Noto_Sans_KR({
   subsets: ["latin"],
   variable: "--font-sans",
+  weight: ["400", "500", "700"],
   display: "swap"
 });
 
@@ -34,7 +35,7 @@ export default function RootLayout({
       <body
         className={cn(
           "min-h-screen bg-background text-foreground antialiased",
-          inter.variable,
+          notoSansKr.variable,
           ibmPlexMono.variable
         )}
       >

@@ -53,4 +53,150 @@
       linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
     background-size: 32px 32px;
   }
+
+  .landing-shell {
+    background-color: #050505;
+    background-image:
+      radial-gradient(circle at 15% 15%, rgba(0, 212, 170, 0.18), transparent 26%),
+      radial-gradient(circle at 85% 20%, rgba(255, 107, 53, 0.12), transparent 22%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 24%);
+  }
+
+  .landing-grid {
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+    background-size: 44px 44px;
+  }
+
+  .landing-panel {
+    background:
+      linear-gradient(180deg, rgba(18, 18, 18, 0.96), rgba(8, 8, 8, 0.92));
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow:
+      0 28px 100px rgba(0, 0, 0, 0.48),
+      inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  }
+
+  .landing-glow {
+    box-shadow:
+      0 0 0 1px rgba(0, 212, 170, 0.12),
+      0 36px 120px rgba(0, 0, 0, 0.54);
+  }
+
+  .landing-fade-up {
+    animation: landing-fade-up 0.9s cubic-bezier(0.2, 0.9, 0.2, 1) both;
+    animation-delay: var(--landing-delay, 0ms);
+  }
+
+  .landing-type-stack {
+    position: relative;
+    min-height: 5.75rem;
+  }
+
+  .landing-type-line {
+    position: absolute;
+    inset: 0 auto auto 0;
+    display: inline-block;
+    max-width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+    width: 0;
+    opacity: 0;
+    border-right: 2px solid rgba(0, 212, 170, 0.9);
+    animation:
+      landing-typewriter 12s steps(42, end) infinite,
+      landing-caret 0.9s step-end infinite;
+    animation-delay: calc(var(--line-index, 0) * 4s), 0s;
+  }
+
+  .landing-scan {
+    animation: landing-scan 6s linear infinite;
+  }
+}
+
+@keyframes landing-typewriter {
+  0%,
+  6% {
+    width: 0;
+    opacity: 0;
+  }
+
+  10% {
+    opacity: 1;
+  }
+
+  24%,
+  28% {
+    width: 100%;
+    opacity: 1;
+  }
+
+  33%,
+  100% {
+    width: 0;
+    opacity: 0;
+  }
+}
+
+@keyframes landing-caret {
+  0%,
+  49% {
+    border-color: rgba(0, 212, 170, 0.9);
+  }
+
+  50%,
+  100% {
+    border-color: transparent;
+  }
+}
+
+@keyframes landing-scan {
+  0% {
+    transform: translateY(-12%);
+    opacity: 0;
+  }
+
+  10%,
+  90% {
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateY(420%);
+    opacity: 0;
+  }
+}
+
+@keyframes landing-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-fade-up,
+  .landing-type-line,
+  .landing-scan {
+    animation: none !important;
+  }
+
+  .landing-type-stack {
+    min-height: auto;
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .landing-type-line {
+    position: static;
+    width: auto;
+    opacity: 1;
+    border-right: none;
+  }
 }
