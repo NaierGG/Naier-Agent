@@ -7,6 +7,12 @@ import {
   getSupabaseServiceEnv
 } from "@/lib/supabase/config";
 
+type SupabaseCookie = {
+  name: string;
+  value: string;
+  options?: Record<string, unknown>;
+};
+
 export function createSupabaseServerClient() {
   const cookieStore = cookies();
   const { url, anonKey } = getSupabasePublicEnv();
@@ -16,7 +22,7 @@ export function createSupabaseServerClient() {
       getAll() {
         return cookieStore.getAll();
       },
-      setAll(cookiesToSet) {
+      setAll(cookiesToSet: SupabaseCookie[]) {
         try {
           const writableCookieStore = cookieStore as typeof cookieStore & {
             set?: (
@@ -26,7 +32,7 @@ export function createSupabaseServerClient() {
             ) => void;
           };
 
-          cookiesToSet.forEach(({ name, value, options }) => {
+          cookiesToSet.forEach(({ name, value, options }: SupabaseCookie) => {
             writableCookieStore.set?.(name, value, options);
           });
         } catch {
