@@ -4,6 +4,7 @@ import { createSupabaseAdminClient, createSupabaseServerClient } from "@/lib/sup
 import { executeWorkflow } from "@/lib/workflow-engine/executor";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 export async function POST(
   _request: Request,

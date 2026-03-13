@@ -9,63 +9,51 @@ import {
 import type { WorkflowExecution } from "@/types";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
+
+function getKstTimestamp(date = new Date()) {
+  const formatter = new Intl.DateTimeFormat("sv-SE", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false
+  });
+
+  return formatter.format(date).replace(" ", "T");
+}
 
 function isAuthorizedRequest(request: Request) {
   const cronSecret = process.env.CRON_SECRET;
   const authorizationHeader = request.headers.get("authorization");
-  const bearerToken = authorizationHeader?.replace(/^Bearer\s+/i, "") || "";
-  const xCronSecret = request.headers.get("x-cron-secret") || "";
 
   if (!cronSecret) {
     throw new Error("CRON_SECRET 환경변수가 설정되지 않았습니다.");
   }
 
-  return bearerToken === cronSecret || xCronSecret === cronSecret;
+  return authorizationHeader === `Bearer ${cronSecret}`;
 }
 
 export async function GET(request: Request) {
   try {
     if (!isAuthorizedRequest(request)) {
-      return NextResponse.json(
-        { message: "Unauthorized cron request." },
-        { status: 401 }
-      );
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
+    const now = new Date();
     const supabaseAdminClient = createSupabaseAdminClient();
     const activeWorkflows = await getActiveScheduledWorkflows(supabaseAdminClient);
-    const now = new Date();
-    const executionResults: Array<{
-      workflowId: string;
-      executionId?: string;
-      status: WorkflowExecution["status"] | "skipped";
-      error?: string;
-    }> = [];
+    const matchingWorkflows = activeWorkflows.filter((workflow) =>
+      workflow.schedule_cron
+        ? matchesCronExpression(workflow.schedule_cron, now, "Asia/Seoul")
+        : false
+    );
 
-    for (const workflow of activeWorkflows) {
-      if (!workflow.schedule_cron) {
-        executionResults.push({
-          workflowId: workflow.id,
-          status: "skipped"
-        });
-        continue;
-      }
-
-      const isMatch = matchesCronExpression(
-        workflow.schedule_cron,
-        now,
-        "Asia/Seoul"
-      );
-
-      if (!isMatch) {
-        executionResults.push({
-          workflowId: workflow.id,
-          status: "skipped"
-        });
-        continue;
-      }
-
-      try {
+    const settledResults = await Promise.allSettled(
+      matchingWorkflows.map(async (workflow) => {
         const execution = await executeWorkflow(
           workflow.id,
           workflow.user_id,
@@ -73,33 +61,47 @@ export async function GET(request: Request) {
           supabaseAdminClient
         );
 
-        executionResults.push({
+        return {
           workflowId: workflow.id,
           executionId: execution.id,
           status: execution.status
-        });
-      } catch (error) {
-        executionResults.push({
-          workflowId: workflow.id,
-          status: "failed",
-          error: error instanceof Error ? error.message : "Unknown execution error"
-        });
+        };
+      })
+    );
+
+    const results: Array<{
+      workflowId: string;
+      executionId?: string;
+      status: WorkflowExecution["status"];
+      error?: string;
+    }> = settledResults.map((result, index) => {
+      const workflow = matchingWorkflows[index];
+
+      if (result.status === "fulfilled") {
+        return result.value;
       }
-    }
+
+      return {
+        workflowId: workflow.id,
+        status: "failed",
+        error:
+          result.reason instanceof Error
+            ? result.reason.message
+            : "Unknown execution error"
+      };
+    });
 
     return NextResponse.json({
-      timestamp: now.toISOString(),
-      executed: executionResults.filter((result) => result.status !== "skipped"),
-      skipped: executionResults.filter((result) => result.status === "skipped")
-        .length
+      executed: results.map((result) => result.workflowId),
+      skipped: activeWorkflows.length - matchingWorkflows.length,
+      timestamp: getKstTimestamp(now),
+      results
     });
   } catch (error) {
     return NextResponse.json(
       {
         message:
-          error instanceof Error
-            ? error.message
-            : "Cron execution failed."
+          error instanceof Error ? error.message : "Cron execution failed."
       },
       { status: 500 }
     );
