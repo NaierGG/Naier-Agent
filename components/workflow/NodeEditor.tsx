@@ -43,6 +43,7 @@ import type {
   NodeConfigField,
   Workflow,
   WorkflowEdge,
+  WorkflowEdgeBranch,
   WorkflowNode
 } from "@/types";
 
@@ -91,6 +92,32 @@ function createNodeId() {
 
 function createEdgeId(source: string, target: string) {
   return `edge_${source}_${target}_${Math.random().toString(36).slice(2, 6)}`;
+}
+
+function normalizeEdgeBranch(
+  branch: WorkflowEdge["branch"],
+  nodeType: WorkflowNode["type"]
+): WorkflowEdgeBranch {
+  if (nodeType === "condition") {
+    return branch === "false" ? "false" : "true";
+  }
+
+  return "default";
+}
+
+function getEdgeForTarget(edges: WorkflowEdge[], sourceId: string, targetId: string) {
+  return edges.find((edge) => edge.source === sourceId && edge.target === targetId) || null;
+}
+
+function getBranchLabel(branch: WorkflowEdgeBranch) {
+  switch (branch) {
+    case "true":
+      return "Matched";
+    case "false":
+      return "Not Matched";
+    default:
+      return "Default";
+  }
 }
 
 function getErrorMessage(result: any, fallbackMessage: string) {
@@ -439,7 +466,11 @@ export function NodeEditor({ workflow }: { workflow: Workflow }) {
     setSelectedNodeId(remainingNodes[0]?.id ?? null);
   }
 
-  function handleToggleEdge(targetId: string, checked: boolean) {
+  function handleToggleEdge(
+    targetId: string,
+    checked: boolean,
+    branch: WorkflowEdgeBranch = selectedNode?.type === "condition" ? "true" : "default"
+  ) {
     if (!selectedNode || selectedNode.id === targetId) {
       return;
     }
@@ -471,11 +502,30 @@ export function NodeEditor({ workflow }: { workflow: Workflow }) {
           {
             id: createEdgeId(selectedNode.id, targetId),
             source: selectedNode.id,
-            target: targetId
+            target: targetId,
+            branch: selectedNode.type === "condition" ? branch : undefined
           }
         ]
       };
     });
+  }
+
+  function handleEdgeBranchChange(targetId: string, branch: WorkflowEdgeBranch) {
+    if (!selectedNode) {
+      return;
+    }
+
+    updateWorkflow((current) => ({
+      ...current,
+      edges: current.edges.map((edge) =>
+        edge.source === selectedNode.id && edge.target === targetId
+          ? {
+              ...edge,
+              branch: selectedNode.type === "condition" ? branch : undefined
+            }
+          : edge
+      )
+    }));
   }
 
   async function handleCopy(value: string, message: string) {
@@ -1300,19 +1350,54 @@ export function NodeEditor({ workflow }: { workflow: Workflow }) {
                   <div className="space-y-2">
                     {sortNodes(
                       draftWorkflow.nodes.filter((node) => node.id !== selectedNode.id)
-                    ).map((node) => (
-                      <label
-                        key={node.id}
-                        className="flex items-center gap-3 rounded-2xl border border-white/8 bg-black/20 px-4 py-3 text-sm text-zinc-200"
-                      >
-                        <Checkbox
-                          checked={outgoingTargets.has(node.id)}
-                          onChange={(event) => handleToggleEdge(node.id, event.target.checked)}
-                        />
-                        <span className="text-base">{getNodeDefinition(node.type).icon}</span>
-                        <span className="flex-1">{node.label}</span>
-                      </label>
-                    ))}
+                    ).map((node) => {
+                      const edge = getEdgeForTarget(
+                        draftWorkflow.edges,
+                        selectedNode.id,
+                        node.id
+                      );
+                      const branch = normalizeEdgeBranch(edge?.branch, selectedNode.type);
+
+                      return (
+                        <div
+                          key={node.id}
+                          className="rounded-2xl border border-white/8 bg-black/20 px-4 py-3 text-sm text-zinc-200"
+                        >
+                          <div className="flex items-center gap-3">
+                            <Checkbox
+                              checked={outgoingTargets.has(node.id)}
+                              onChange={(event) =>
+                                handleToggleEdge(node.id, event.target.checked, branch)
+                              }
+                            />
+                            <span className="text-base">{getNodeDefinition(node.type).icon}</span>
+                            <span className="flex-1">{node.label}</span>
+                          </div>
+
+                          {selectedNode.type === "condition" ? (
+                            <div className="mt-3 flex items-center justify-between gap-3 border-t border-white/6 pt-3">
+                              <span className="text-xs uppercase tracking-[0.16em] text-zinc-500">
+                                Branch
+                              </span>
+                              <select
+                                value={branch}
+                                disabled={!edge}
+                                onChange={(event) =>
+                                  handleEdgeBranchChange(
+                                    node.id,
+                                    event.target.value as WorkflowEdgeBranch
+                                  )
+                                }
+                                className="h-9 rounded-xl border border-white/10 bg-[#0d0d0d] px-3 text-xs text-zinc-100 outline-none transition focus:border-primary/60"
+                              >
+                                <option value="true">{getBranchLabel("true")}</option>
+                                <option value="false">{getBranchLabel("false")}</option>
+                              </select>
+                            </div>
+                          ) : null}
+                        </div>
+                      );
+                    })}
 
                     {draftWorkflow.nodes.length <= 1 ? (
                       <div className="rounded-2xl border border-dashed border-white/10 bg-black/10 px-4 py-4 text-sm text-zinc-500">

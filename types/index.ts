@@ -27,10 +27,13 @@ export interface WorkflowNode {
   position: WorkflowNodePosition;
 }
 
+export type WorkflowEdgeBranch = "default" | "true" | "false";
+
 export interface WorkflowEdge {
   id: string;
   source: string;
   target: string;
+  branch?: WorkflowEdgeBranch | null;
 }
 
 export interface Workflow {

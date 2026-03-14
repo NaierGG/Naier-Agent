@@ -10,6 +10,7 @@ import type {
   UserApiKeys,
   Workflow,
   WorkflowEdge,
+  WorkflowEdgeBranch,
   WorkflowExecution,
   WorkflowNode,
   WorkflowTriggerType
@@ -317,6 +318,23 @@ function normalizeExecutionInput(
   return input ?? triggerPayload;
 }
 
+function getEdgeBranch(edge: WorkflowEdge): WorkflowEdgeBranch {
+  return edge.branch || "default";
+}
+
+function shouldActivateConditionEdge(
+  edge: WorkflowEdge,
+  matched: boolean
+) {
+  const branch = getEdgeBranch(edge);
+
+  if (matched) {
+    return branch === "true" || branch === "default";
+  }
+
+  return branch === "false";
+}
+
 function clampDelaySeconds(value: unknown) {
   const parsed = Number.parseInt(String(value ?? 0), 10);
 
@@ -329,7 +347,7 @@ function clampDelaySeconds(value: unknown) {
 
 function getIncomingEdgeMap(nodes: WorkflowNode[], edges: WorkflowEdge[]) {
   const nodeIds = new Set(nodes.map((node) => node.id));
-  const incoming = new Map<string, string[]>();
+  const incoming = new Map<string, WorkflowEdge[]>();
 
   for (const node of nodes) {
     incoming.set(node.id, []);
@@ -340,7 +358,7 @@ function getIncomingEdgeMap(nodes: WorkflowNode[], edges: WorkflowEdge[]) {
       continue;
     }
 
-    incoming.get(edge.target)?.push(edge.source);
+    incoming.get(edge.target)?.push(edge);
   }
 
   return incoming;
@@ -348,13 +366,16 @@ function getIncomingEdgeMap(nodes: WorkflowNode[], edges: WorkflowEdge[]) {
 
 function getNodeInput(
   nodeId: string,
-  incomingEdgeMap: Map<string, string[]>,
+  incomingEdgeMap: Map<string, WorkflowEdge[]>,
   nodeOutputs: Map<string, unknown>,
+  activeEdgeIds: Set<string>,
   triggerPayload: Record<string, unknown>
 ) {
-  const incomingNodeIds = incomingEdgeMap.get(nodeId) || [];
+  const incomingEdges = incomingEdgeMap.get(nodeId) || [];
+  const activeIncomingEdges = incomingEdges.filter((edge) => activeEdgeIds.has(edge.id));
+  const incomingNodeIds = activeIncomingEdges.map((edge) => edge.source);
 
-  if (incomingNodeIds.length === 0) {
+  if (incomingEdges.length === 0) {
     return triggerPayload;
   }
 
@@ -372,6 +393,33 @@ function getNodeInput(
       incomingNodeIds.map((parentId) => [parentId, nodeOutputs.get(parentId) ?? null])
     )
   };
+}
+
+function getActivatedOutgoingEdgeIds(
+  node: WorkflowNode,
+  edges: WorkflowEdge[],
+  output: unknown,
+  status: ExecutionLog["status"]
+) {
+  const outgoingEdges = edges.filter((edge) => edge.source === node.id);
+
+  if (outgoingEdges.length === 0 || status === "skipped") {
+    return [];
+  }
+
+  if (node.type === "condition") {
+    if (status !== "success") {
+      return [];
+    }
+
+    const matched = isRecord(output) ? Boolean(output.matched) : false;
+
+    return outgoingEdges
+      .filter((edge) => shouldActivateConditionEdge(edge, matched))
+      .map((edge) => edge.id);
+  }
+
+  return outgoingEdges.map((edge) => edge.id);
 }
 
 function topologicalSort(nodes: WorkflowNode[], edges: WorkflowEdge[]) {
@@ -1340,6 +1388,7 @@ export async function executeWorkflow(
     const orderedNodes = topologicalSort(nodes, edges);
     const incomingEdgeMap = getIncomingEdgeMap(nodes, edges);
     const nodeOutputs = new Map<string, unknown>();
+    const activeEdgeIds = new Set<string>();
     const triggerPayload = {
       triggered_at: startedAt,
       trigger_type: triggerType,
@@ -1347,10 +1396,35 @@ export async function executeWorkflow(
     };
 
     for (const node of orderedNodes) {
+      const incomingEdges = incomingEdgeMap.get(node.id) || [];
+      const hasActiveIncomingEdge =
+        incomingEdges.length === 0 ||
+        incomingEdges.some((edge) => activeEdgeIds.has(edge.id));
+
+      if (!hasActiveIncomingEdge) {
+        executionLogs.push({
+          node_id: node.id,
+          node_label: node.label,
+          status: "skipped",
+          input: null,
+          output: null,
+          error: null,
+          duration_ms: 0,
+          timestamp: new Date().toISOString()
+        });
+
+        if (executionId) {
+          await updateExecutionLogs(supabaseServiceClient, executionId, executionLogs);
+        }
+
+        continue;
+      }
+
       const rawInput = getNodeInput(
         node.id,
         incomingEdgeMap,
         nodeOutputs,
+        activeEdgeIds,
         triggerPayload
       );
       const nodeInput = normalizeExecutionInput(node, rawInput, triggerPayload);
@@ -1388,6 +1462,12 @@ export async function executeWorkflow(
 
       if (executionId) {
         await updateExecutionLogs(supabaseServiceClient, executionId, executionLogs);
+      }
+
+      const activatedEdgeIds = getActivatedOutgoingEdgeIds(node, edges, output, status);
+
+      for (const edgeId of activatedEdgeIds) {
+        activeEdgeIds.add(edgeId);
       }
 
       if (status === "failed" && CRITICAL_NODE_TYPES.has(node.type)) {
