@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
 
-import { createSupabaseAdminClient, createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  createSupabaseAdminClient,
+  createSupabaseServerClient
+} from "@/lib/supabase/server";
 import { executeWorkflow } from "@/lib/workflow-engine/executor";
+import {
+  enqueueWorkflowRun,
+  isWorkflowQueueEnabled
+} from "@/lib/workflow-engine/queue";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -23,6 +30,38 @@ export async function POST(
       );
     }
 
+    const { data: workflow, error } = await supabase
+      .from("workflows")
+      .select("id")
+      .eq("id", params.id)
+      .eq("user_id", user.id)
+      .single();
+
+    if (error || !workflow) {
+      return NextResponse.json(
+        { message: "워크플로우를 찾을 수 없습니다." },
+        { status: 404 }
+      );
+    }
+
+    if (isWorkflowQueueEnabled()) {
+      const queued = await enqueueWorkflowRun({
+        workflowId: params.id,
+        userId: user.id,
+        triggerType: "manual",
+        source: "manual"
+      });
+
+      return NextResponse.json(
+        {
+          queued: true,
+          jobId: queued.job.id,
+          status: "success"
+        },
+        { status: 202 }
+      );
+    }
+
     const execution = await executeWorkflow(
       params.id,
       user.id,
@@ -32,7 +71,8 @@ export async function POST(
 
     return NextResponse.json({
       executionId: execution.id,
-      status: execution.status
+      status: execution.status,
+      queued: false
     });
   } catch (error) {
     return NextResponse.json(

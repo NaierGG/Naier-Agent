@@ -3,14 +3,19 @@ import type { WorkflowExecution } from "@/types";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import { executeWorkflow } from "@/lib/workflow-engine/executor";
 import {
+  enqueueWorkflowRun,
+  isWorkflowQueueEnabled
+} from "@/lib/workflow-engine/queue";
+import {
   getActiveScheduledWorkflows,
   matchesCronExpression
 } from "@/lib/workflow-engine/scheduler";
 
 export type ScheduledWorkflowResult = {
   workflowId: string;
+  jobId?: string;
   executionId?: string;
-  status: WorkflowExecution["status"];
+  status: WorkflowExecution["status"] | "queued";
   error?: string;
 };
 
@@ -32,6 +37,7 @@ function getKstTimestamp(date = new Date()) {
 export async function runScheduledWorkflows(now = new Date()) {
   const supabaseAdminClient = createSupabaseAdminClient();
   const activeWorkflows = await getActiveScheduledWorkflows(supabaseAdminClient);
+  const queueEnabled = isWorkflowQueueEnabled();
   const matchingWorkflows = activeWorkflows.filter((workflow) =>
     workflow.schedule_cron
       ? matchesCronExpression(workflow.schedule_cron, now, "Asia/Seoul")
@@ -40,6 +46,21 @@ export async function runScheduledWorkflows(now = new Date()) {
 
   const settledResults = await Promise.allSettled(
     matchingWorkflows.map(async (workflow) => {
+      if (queueEnabled) {
+        const queued = await enqueueWorkflowRun({
+          workflowId: workflow.id,
+          userId: workflow.user_id,
+          triggerType: "schedule",
+          source: "schedule"
+        });
+
+        return {
+          workflowId: workflow.id,
+          jobId: queued.job.id,
+          status: "queued"
+        } satisfies ScheduledWorkflowResult;
+      }
+
       const execution = await executeWorkflow(
         workflow.id,
         workflow.user_id,
@@ -73,7 +94,12 @@ export async function runScheduledWorkflows(now = new Date()) {
   });
 
   return {
-    executed: results.map((result) => result.workflowId),
+    executed: results
+      .filter((result) => result.status !== "queued")
+      .map((result) => result.workflowId),
+    enqueued: results
+      .filter((result) => result.status === "queued")
+      .map((result) => result.workflowId),
     skipped: activeWorkflows.length - matchingWorkflows.length,
     timestamp: getKstTimestamp(now),
     results

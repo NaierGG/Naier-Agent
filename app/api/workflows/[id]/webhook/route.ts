@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import { executeWorkflow } from "@/lib/workflow-engine/executor";
+import {
+  enqueueWorkflowRun,
+  isWorkflowQueueEnabled
+} from "@/lib/workflow-engine/queue";
 import type { Workflow, WorkflowNode } from "@/types";
 
 export const runtime = "nodejs";
@@ -129,28 +133,51 @@ async function handleWebhook(request: NextRequest, workflowId: string) {
 
   requestUrl.searchParams.delete("secret");
 
+  const triggerPayload = {
+    webhook: {
+      method: requestMethod,
+      query: Object.fromEntries(requestUrl.searchParams.entries()),
+      headers: sanitizeHeaders(request),
+      body: await readWebhookBody(request),
+      received_at: new Date().toISOString()
+    }
+  };
+
+  if (isWorkflowQueueEnabled()) {
+    const queued = await enqueueWorkflowRun({
+      workflowId: workflow.id,
+      userId: workflow.user_id,
+      triggerType: "webhook",
+      triggerPayload,
+      source: "webhook"
+    });
+
+    return NextResponse.json(
+      {
+        success: true,
+        queued: true,
+        jobId: queued.job.id,
+        status: "queued"
+      },
+      { status: 202 }
+    );
+  }
+
   const execution = await executeWorkflow(
     workflow.id,
     workflow.user_id,
     "webhook",
     adminClient,
     {
-      triggerPayload: {
-        webhook: {
-          method: requestMethod,
-          query: Object.fromEntries(requestUrl.searchParams.entries()),
-          headers: sanitizeHeaders(request),
-          body: await readWebhookBody(request),
-          received_at: new Date().toISOString()
-        }
-      }
+      triggerPayload
     }
   );
 
   return NextResponse.json({
     success: execution.status === "success",
     executionId: execution.id,
-    status: execution.status
+    status: execution.status,
+    queued: false
   });
 }
 

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { runScheduledWorkflows } from "@/lib/workflow-engine/run-scheduled-workflows";
+import { runWorkflowQueueCycle } from "@/lib/workflow-engine/run-queue-cycle";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -22,7 +22,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const result = await runScheduledWorkflows(new Date());
+    const result = await runWorkflowQueueCycle(new Date());
 
     return NextResponse.json(result);
   } catch (error) {
