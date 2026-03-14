@@ -16,12 +16,25 @@ function isAuthorizedRequest(request: Request) {
   return authorizationHeader === `Bearer ${cronSecret}`;
 }
 
+function parseLimit(request: Request) {
+  const url = new URL(request.url);
+  const rawLimit = Number.parseInt(url.searchParams.get("limit") || "", 10);
+
+  if (Number.isNaN(rawLimit) || rawLimit < 1) {
+    return undefined;
+  }
+
+  return rawLimit;
+}
+
 async function handleProcessQueue(request: Request) {
   if (!isAuthorizedRequest(request)) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
-  const result = await processWorkflowQueue();
+  const result = await processWorkflowQueue({
+    limit: parseLimit(request)
+  });
   return NextResponse.json(result);
 }
 
