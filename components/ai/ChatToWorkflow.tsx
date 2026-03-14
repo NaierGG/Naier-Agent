@@ -42,13 +42,13 @@ type GenerateWorkflowResponse = {
 };
 
 const initialAssistantMessage =
-  "\uC548\uB155\uD558\uC138\uC694! \uC5B4\uB5A4 \uC8FC\uC2DD \uC790\uB3D9\uD654\uB97C \uC6D0\uD558\uC2DC\uB098\uC694?\n\uC608\uC2DC:\n\u2022 '\uC0BC\uC131\uC804\uC790 \uB274\uC2A4 \uB9E4\uC77C \uC624\uC804 9\uC2DC\uC5D0 \uD154\uB808\uADF8\uB7A8\uC73C\uB85C'\n\u2022 'DART \uACF5\uC2DC \uB098\uC624\uBA74 AI \uC694\uC57D\uD574\uC11C \uB514\uC2A4\uCF54\uB4DC\uB85C'\n\u2022 '\uB0B4 \uAD00\uC2EC \uC885\uBAA9 \uC8FC\uAC00 \uAE09\uB4F1\uD558\uBA74 \uC54C\uB9BC \uC918'";
+  "안녕하세요! 어떤 자동화나 AI 에이전트를 만들고 싶으신가요?\n예시:\n• '매일 오전 9시에 운영 현황 API를 불러와서 이메일로 보내줘'\n• '웹훅으로 들어오는 요청을 검증해서 디스코드로 알려줘'\n• '외부 API 응답을 AI가 요약해서 텔레그램으로 보내줘'";
 
 const suggestionChips = [
-  "\uB9E4\uC77C \uC544\uCE68 \uC8FC\uC2DD \uB274\uC2A4 \uBC1B\uAE30",
-  "DART \uACF5\uC2DC \uC54C\uB9BC \uBC1B\uAE30",
-  "\uC8FC\uAC00 \uAE09\uBCC0 \uC54C\uB9BC \uBC1B\uAE30",
-  "AI\uAC00 \uBD84\uC11D\uD55C \uC885\uBAA9 \uB9AC\uD3EC\uD2B8 \uBC1B\uAE30"
+  "매일 리포트 이메일 받기",
+  "웹훅 요청 검증하기",
+  "외부 API 결과 알림 받기",
+  "AI가 정리한 작업 브리핑 받기"
 ];
 
 function createInitialMessages(): ChatMessage[] {

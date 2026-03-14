@@ -99,6 +99,77 @@ export const NODE_DEFINITION_LIST: NodeDefinition[] = [
     }
   },
   {
+    type: "http_request",
+    label: "HTTP \uC694\uCCAD",
+    description: "\uC678\uBD80 API\uB098 \uC11C\uBE44\uC2A4\uC5D0 HTTP \uC694\uCCAD\uC744 \uBCF4\uB0C5\uB2C8\uB2E4.",
+    icon: "\uD83C\uDF10",
+    category: "source",
+    configSchema: [
+      {
+        key: "url",
+        label: "URL",
+        type: "text",
+        required: true,
+        placeholder: "https://api.example.com/v1/items"
+      },
+      {
+        key: "method",
+        label: "Method",
+        type: "select",
+        required: true,
+        defaultValue: "GET",
+        options: [
+          { label: "GET", value: "GET" },
+          { label: "POST", value: "POST" },
+          { label: "PUT", value: "PUT" },
+          { label: "PATCH", value: "PATCH" },
+          { label: "DELETE", value: "DELETE" }
+        ]
+      },
+      {
+        key: "headers_json",
+        label: "Headers JSON",
+        type: "textarea",
+        required: false,
+        placeholder: "{\n  \"Authorization\": \"Bearer ...\"\n}"
+      },
+      {
+        key: "body_template",
+        label: "Body Template",
+        type: "textarea",
+        required: false,
+        placeholder: "{\n  \"message\": \"{{input.text}}\"\n}"
+      },
+      {
+        key: "response_type",
+        label: "Response Type",
+        type: "select",
+        required: true,
+        defaultValue: "json",
+        options: [
+          { label: "json", value: "json" },
+          { label: "text", value: "text" }
+        ]
+      },
+      {
+        key: "timeout_seconds",
+        label: "Timeout (sec)",
+        type: "number",
+        required: false,
+        defaultValue: 20,
+        min: 1,
+        max: 60
+      }
+    ],
+    outputExample: {
+      ok: true,
+      status: 200,
+      data: {
+        items: [{ id: "1", title: "example" }]
+      }
+    }
+  },
+  {
     type: "dart_news",
     label: "DART \uACF5\uC2DC \uC218\uC9D1",
     description: "\uAE08\uC735\uAC10\uB3C5\uC6D0 DART\uC5D0\uC11C \uAE30\uC5C5 \uACF5\uC2DC\uB97C \uAC00\uC838\uC635\uB2C8\uB2E4.",
@@ -242,6 +313,36 @@ export const NODE_DEFINITION_LIST: NodeDefinition[] = [
           marketCap: 484000000000000
         }
       ]
+    }
+  },
+  {
+    type: "text_template",
+    label: "\uD15C\uD50C\uB9BF \uBCC0\uD658",
+    description: "\uC785\uB825 \uB370\uC774\uD130\uB97C \uBB38\uC790\uC5F4 \uD15C\uD50C\uB9BF\uC73C\uB85C \uAC00\uACF5\uD569\uB2C8\uB2E4.",
+    icon: "\uD83E\uDDFE",
+    category: "filter",
+    configSchema: [
+      {
+        key: "template",
+        label: "Template",
+        type: "textarea",
+        required: true,
+        defaultValue: "{{input}}"
+      },
+      {
+        key: "output_key",
+        label: "Output Key",
+        type: "text",
+        required: false,
+        defaultValue: "text",
+        placeholder: "text"
+      }
+    ],
+    outputExample: {
+      text: "Rendered output",
+      original: {
+        title: "Example"
+      }
     }
   },
   {
@@ -404,6 +505,52 @@ export const NODE_DEFINITION_LIST: NodeDefinition[] = [
     outputExample: {
       delayed: true,
       seconds: 30
+    }
+  },
+  {
+    type: "agent_task",
+    label: "AI Agent Task",
+    description:
+      "Gemini\uB85C \uC784\uC758 \uC785\uB825\uC744 \uBD84\uC11D\uD558\uACE0 \uC2E4\uD589 \uAC00\uB2A5\uD55C \uACB0\uACFC\uB97C \uB9CC\uB4ED\uB2C8\uB2E4.",
+    icon: "\uD83E\uDDE0",
+    category: "ai",
+    configSchema: [
+      {
+        key: "prompt_template",
+        label: "Prompt Template",
+        type: "textarea",
+        required: true,
+        defaultValue:
+          "\uB2E4\uC74C \uC785\uB825\uC744 \uBD84\uC11D\uD558\uACE0 \uB2E4\uC74C \uC2E4\uD589 \uB2E8\uACC4\uC5D0 \uB3C4\uC6C0\uC774 \uB418\uB294 \uACB0\uACFC\uB97C \uB9CC\uB4E4\uC5B4\uC918:\n\n{{input}}"
+      },
+      {
+        key: "output_format",
+        label: "Output Format",
+        type: "select",
+        required: true,
+        defaultValue: "text",
+        options: [
+          { label: "text", value: "text" },
+          { label: "json", value: "json" }
+        ]
+      },
+      {
+        key: "model",
+        label: "Gemini Model",
+        type: "select",
+        required: true,
+        defaultValue: "gemini-2.0-flash",
+        options: [
+          { label: "gemini-2.0-flash", value: "gemini-2.0-flash" },
+          { label: "gemini-1.5-flash", value: "gemini-1.5-flash" }
+        ]
+      }
+    ],
+    outputExample: {
+      text: "Summarized action plan",
+      result: {
+        priority: "high"
+      }
     }
   },
   {

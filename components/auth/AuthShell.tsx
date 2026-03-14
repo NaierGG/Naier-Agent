@@ -36,7 +36,7 @@ export function AuthShell({
                 },
                 {
                   label: "BYOK",
-                  value: "Gemini / DART"
+                  value: "Gemini / Channels"
                 },
                 {
                   label: "\uBC30\uD3EC",

@@ -123,7 +123,7 @@ export function NodeCard({ node, isTesting, testResult, onTest }: NodeCardProps)
         <Textarea
           value={rawInput}
           onChange={(event) => setRawInput(event.target.value)}
-          placeholder='예: {"items":[{"title":"삼성전자 뉴스"}]}'
+          placeholder='예: {"items":[{"title":"Daily report","status":"ok"}]}'
           className="min-h-[110px]"
         />
         {inputError ? <p className="mt-2 text-sm text-rose-300">{inputError}</p> : null}

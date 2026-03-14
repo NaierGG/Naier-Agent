@@ -140,7 +140,7 @@ export function SignupForm() {
             </Label>
             <Input
               id="displayName"
-              placeholder="StockFlow Trader"
+              placeholder="Naier Builder"
               {...form.register("displayName")}
             />
             {form.formState.errors.displayName ? (

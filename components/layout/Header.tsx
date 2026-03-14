@@ -24,7 +24,7 @@ export function Header({
             </Button>
             <div>
               <p className="font-mono text-sm text-primary">
-                StockFlow Control Panel
+                Naier Control Panel
               </p>
               <p className="text-xs text-zinc-500">
                 {

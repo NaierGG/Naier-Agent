@@ -1,7 +1,12 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 import { ALL_NODE_TYPES, NODE_DEFINITIONS } from "@/lib/nodes/registry";
-import type { ConversationMessage, NodeType, Workflow, WorkflowEdge, WorkflowNode } from "@/types";
+import type {
+  NodeType,
+  Workflow,
+  WorkflowEdge,
+  WorkflowNode
+} from "@/types";
 
 type GeminiWorkflowResponse = {
   type?: "workflow_generated" | "need_more_info" | "clarification";
@@ -31,8 +36,8 @@ function buildNodeCatalogPrompt() {
 
 function buildSystemPrompt() {
   return `
-당신은 StockFlow AI의 워크플로우 생성 전문가입니다.
-한국 주식 투자자들이 자연어로 설명하면, 실행 가능한 자동화 워크플로우 JSON을 생성합니다.
+당신은 Naier의 워크플로우 생성 전문가입니다.
+사용자가 자연어로 설명하면, 실행 가능한 자동화 워크플로우 JSON을 생성합니다.
 
 ## 사용 가능한 노드 타입:
 ${buildNodeCatalogPrompt()}
@@ -42,8 +47,9 @@ ${buildNodeCatalogPrompt()}
 2. 정보가 부족하면 질문을 하세요. 질문은 한 번에 최대 2개만 하세요.
 3. 항상 한국어로 응답하세요.
 4. 지원 가능한 노드만 사용하세요.
-5. 스케줄이 명확하면 trigger_schedule을 사용하고, 그렇지 않으면 trigger_manual을 사용하세요.
+5. 스케줄이 명확하면 trigger_schedule을 사용하고, 그렇지 않으면 trigger_manual 또는 trigger_webhook을 사용하세요.
 6. 노드는 실행 순서대로 배열하고, edges도 같은 순서로 연결하세요.
+7. 범용 자동화 예시를 우선하되, 필요하면 주식/뉴스/DART 같은 특화 노드도 사용해도 됩니다.
 
 ## 응답 JSON 형식:
 {
@@ -71,13 +77,16 @@ ${buildNodeCatalogPrompt()}
 
 ## 예시:
 예시 1
-사용자: "삼성전자 뉴스 매일 아침 9시에 텔레그램으로 받고 싶어"
-응답 방향: trigger_schedule -> naver_stock_news(005930) -> send_telegram
+사용자: "매일 오전 9시에 운영 현황 API를 불러와서 요약 후 이메일로 보내줘"
+응답 방향: trigger_schedule -> http_request -> agent_task -> send_email
 
 예시 2
-사용자: "DART 공시 나오면 AI가 요약해서 디스코드로 보내줘"
-질문: "어떤 기업의 공시를 받으시겠어요? 종목코드나 기업명을 알려주세요."
-후속 응답 방향: trigger_schedule(0 8 * * 1-5) -> dart_news -> ai_summarize -> send_discord
+사용자: "웹훅으로 들어오는 주문 요청을 검증해서 디스코드로 알려줘"
+응답 방향: trigger_webhook -> text_template 또는 condition -> send_discord
+
+예시 3
+사용자: "매시간 외부 API를 호출해서 결과를 텔레그램으로 받고 싶어"
+질문: "어떤 API URL을 호출할까요?", "응답 결과를 그대로 보낼까요, AI가 가공할까요?"
 `.trim();
 }
 
@@ -98,15 +107,9 @@ function extractJsonString(rawText: string) {
   return rawText.trim();
 }
 
-function ensureTriggerNode(
-  nodes: WorkflowNode[],
-  scheduleCron: string | null
-): WorkflowNode[] {
-  const hasTrigger = nodes.some(
-    (node) =>
-      node.type === "trigger_schedule" ||
-      node.type === "trigger_manual" ||
-      node.type === "trigger_webhook"
+function ensureTriggerNode(nodes: WorkflowNode[], scheduleCron: string | null): WorkflowNode[] {
+  const hasTrigger = nodes.some((node) =>
+    ["trigger_schedule", "trigger_manual", "trigger_webhook"].includes(node.type)
   );
 
   if (hasTrigger) {
@@ -156,7 +159,7 @@ function buildSequentialEdges(nodes: WorkflowNode[]) {
 }
 
 function sanitizeWorkflow(workflow: GeminiWorkflowResponse["workflow"], userMessage: string) {
-  const rawNodes = Array.isArray(workflow?.nodes) ? workflow?.nodes : [];
+  const rawNodes = Array.isArray(workflow?.nodes) ? workflow.nodes : [];
   const validNodes: WorkflowNode[] = rawNodes
     .map((node, index) => {
       const type = String(node.type || "") as NodeType;
@@ -297,11 +300,11 @@ export async function generateWorkflowFromChat(
     return {
       workflow: null,
       assistantMessage:
-        "응답을 이해하지 못했어요. 자동화 목적과 종목, 알림 채널을 조금 더 구체적으로 알려주세요.",
+        "응답을 이해하지 못했어요. 자동화 목적과 입력 데이터, 실행 채널을 조금 더 구체적으로 알려주세요.",
       needsMoreInfo: true,
       questions: [
-        "어떤 종목이나 기업을 대상으로 할까요?",
-        "결과를 어디로 보내드릴까요? 예: 텔레그램, 디스코드, 이메일"
+        "어떤 데이터나 이벤트를 시작점으로 쓸까요?",
+        "결과를 어디로 보내거나 어떤 작업을 하길 원하시나요?"
       ]
     };
   }
@@ -309,7 +312,7 @@ export async function generateWorkflowFromChat(
   const message =
     typeof parsedResponse.message === "string" && parsedResponse.message.trim()
       ? parsedResponse.message.trim()
-      : "요청 내용을 바탕으로 워크플로우를 준비했습니다.";
+      : "요청 내용을 바탕으로 워크플로우 초안을 준비했습니다.";
 
   if (
     parsedResponse.type === "need_more_info" ||
@@ -329,11 +332,11 @@ export async function generateWorkflowFromChat(
     return {
       workflow: null,
       assistantMessage:
-        "워크플로우 구조를 완성하기에 정보가 조금 부족합니다. 핵심 조건을 한 번만 더 알려주세요.",
+        "워크플로우 구조를 완성하기엔 정보가 조금 부족합니다. 시작 이벤트와 마지막 액션을 알려주세요.",
       needsMoreInfo: true,
       questions: [
-        "어떤 데이터 소스를 쓸까요? 예: 네이버 뉴스, DART 공시, 주가 조회",
-        "실행 시점은 언제가 좋을까요? 예: 평일 오전 9시, 수동 실행"
+        "스케줄, 웹훅, 수동 실행 중 어떤 방식으로 시작할까요?",
+        "HTTP 요청, AI 처리, 텔레그램/디스코드/이메일 중 어떤 단계를 원하시나요?"
       ]
     };
   }

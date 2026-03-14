@@ -19,9 +19,11 @@ const CRITICAL_NODE_TYPES = new Set<NodeType>([
   "trigger_schedule",
   "trigger_manual",
   "trigger_webhook",
+  "http_request",
   "dart_news",
   "naver_stock_news",
-  "korea_stock_price"
+  "korea_stock_price",
+  "agent_task"
 ]);
 
 const ARRAY_OUTPUT_KEYS = ["items", "news", "disclosures", "prices", "summaries"];
@@ -79,6 +81,36 @@ function splitTextInput(value: unknown): string[] {
     .split(/[\n,]+/)
     .map((item) => item.trim())
     .filter(Boolean);
+}
+
+function parseJsonObject(value: unknown, fieldName: string) {
+  if (!value) {
+    return {};
+  }
+
+  if (isRecord(value)) {
+    return value;
+  }
+
+  if (typeof value !== "string") {
+    throw new Error(`${fieldName} 값은 JSON 객체여야 합니다.`);
+  }
+
+  try {
+    const parsed = JSON.parse(value) as unknown;
+
+    if (!isRecord(parsed)) {
+      throw new Error(`${fieldName} 값은 JSON 객체여야 합니다.`);
+    }
+
+    return parsed;
+  } catch (error) {
+    throw new Error(
+      error instanceof Error && error.message
+        ? error.message
+        : `${fieldName} JSON 파싱에 실패했습니다.`
+    );
+  }
 }
 
 function formatDartDate(date: Date) {
@@ -450,6 +482,21 @@ function parseSummaryResponse(rawResponse: string) {
   };
 }
 
+function parseLooseJson(rawResponse: string) {
+  const trimmed = rawResponse.trim();
+  const fencedMatch = trimmed.match(/```json\s*([\s\S]*?)```/i);
+  const candidate = fencedMatch?.[1]?.trim() || trimmed;
+  const firstBrace = candidate.indexOf("{");
+  const lastBrace = candidate.lastIndexOf("}");
+
+  const payload =
+    firstBrace >= 0 && lastBrace > firstBrace
+      ? candidate.slice(firstBrace, lastBrace + 1)
+      : candidate;
+
+  return JSON.parse(payload);
+}
+
 function evaluateCondition(
   operator: string,
   actualValue: unknown,
@@ -737,6 +784,91 @@ async function executeKoreaStockPriceNode(node: WorkflowNode) {
   };
 }
 
+async function executeHttpRequestNode(node: WorkflowNode, input: unknown) {
+  const url = String(node.config.url || "").trim();
+
+  if (!url) {
+    throw new Error("HTTP 요청 노드는 URL 설정이 필요합니다.");
+  }
+
+  const method = String(node.config.method || "GET").trim().toUpperCase();
+  const headers = Object.fromEntries(
+    Object.entries(parseJsonObject(node.config.headers_json, "headers_json")).map(
+      ([key, value]) => [key, String(value)]
+    )
+  );
+  const bodyTemplate = String(node.config.body_template || "").trim();
+  const timeoutSeconds = Math.min(
+    60,
+    Math.max(1, Number.parseInt(String(node.config.timeout_seconds || 20), 10))
+  );
+  const requestInit: RequestInit = {
+    method,
+    headers,
+    signal: AbortSignal.timeout(timeoutSeconds * 1000)
+  };
+
+  if (!["GET", "HEAD"].includes(method) && bodyTemplate) {
+    const body = renderTemplate(bodyTemplate, input);
+    requestInit.body = body;
+
+    if (!headers["Content-Type"] && !headers["content-type"]) {
+      requestInit.headers = {
+        ...headers,
+        "Content-Type": body.trim().startsWith("{") || body.trim().startsWith("[")
+          ? "application/json"
+          : "text/plain; charset=utf-8"
+      };
+    }
+  }
+
+  const response = await fetch(url, requestInit);
+  const responseType = String(node.config.response_type || "json");
+  const responseHeaders = Object.fromEntries(response.headers.entries());
+  const rawText = await response.text();
+
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}: ${rawText || "요청이 실패했습니다."}`);
+  }
+
+  let data: unknown = rawText;
+
+  if (responseType === "json") {
+    try {
+      data = rawText ? JSON.parse(rawText) : null;
+    } catch {
+      data = rawText;
+    }
+  }
+
+  return {
+    ok: response.ok,
+    status: response.status,
+    url,
+    method,
+    headers: responseHeaders,
+    data,
+    text: rawText
+  };
+}
+
+function executeTextTemplateNode(node: WorkflowNode, input: unknown) {
+  const template = String(node.config.template || "").trim();
+
+  if (!template) {
+    throw new Error("템플릿 변환 노드는 template 설정이 필요합니다.");
+  }
+
+  const outputKey = String(node.config.output_key || "text").trim() || "text";
+  const rendered = renderTemplate(template, input);
+
+  return {
+    [outputKey]: rendered,
+    text: rendered,
+    original: input
+  };
+}
+
 function executeFilterKeywordNode(node: WorkflowNode, input: unknown) {
   const items = extractItems(input);
   const keywords = splitTextInput(node.config.keywords);
@@ -852,6 +984,54 @@ async function executeAiSummarizeNode(
   };
 }
 
+async function executeAgentTaskNode(
+  node: WorkflowNode,
+  input: unknown,
+  userApiKeys: Partial<UserApiKeys>
+) {
+  if (!userApiKeys.gemini_api_key) {
+    throw new Error("Gemini API 키가 설정되지 않았습니다.");
+  }
+
+  const promptTemplate = String(node.config.prompt_template || "").trim();
+
+  if (!promptTemplate) {
+    throw new Error("AI Agent Task 노드는 prompt_template 설정이 필요합니다.");
+  }
+
+  const outputFormat = String(node.config.output_format || "text");
+  const modelName = String(node.config.model || "gemini-2.0-flash");
+  const client = new GoogleGenerativeAI(userApiKeys.gemini_api_key);
+  const model = client.getGenerativeModel({ model: modelName });
+  const prompt = promptTemplate.replace(/{{\s*input\s*}}/g, JSON.stringify(input, null, 2));
+  const instruction =
+    outputFormat === "json"
+      ? "\n\n반드시 JSON만 반환하세요."
+      : "\n\n실행 가능한 결과를 간결한 텍스트로 반환하세요.";
+
+  const response = await model.generateContent(`${prompt}${instruction}`);
+  const rawText = response.response.text().trim();
+
+  if (outputFormat === "json") {
+    try {
+      return {
+        result: parseLooseJson(rawText),
+        text: rawText
+      };
+    } catch {
+      return {
+        result: { raw: rawText },
+        text: rawText
+      };
+    }
+  }
+
+  return {
+    result: rawText,
+    text: rawText
+  };
+}
+
 async function executeSendTelegramNode(
   node: WorkflowNode,
   input: unknown,
@@ -925,7 +1105,7 @@ async function executeSendDiscordNode(
   }
 
   const message = renderTemplate(messageTemplate, input);
-  const username = String(node.config.username || "StockFlow Bot").trim();
+  const username = String(node.config.username || "Naier Bot").trim();
   const embedColor = String(node.config.embed_color || "").trim();
   const requestBody: Record<string, unknown> = {
     username
@@ -1024,18 +1204,24 @@ async function executeNode(
         trigger_type: triggerType,
         ...(isRecord(input) ? input : {})
       };
+    case "http_request":
+      return executeHttpRequestNode(node, input);
     case "dart_news":
       return executeDartNewsNode(node, userApiKeys);
     case "naver_stock_news":
       return executeNaverStockNewsNode(node);
     case "korea_stock_price":
       return executeKoreaStockPriceNode(node);
+    case "text_template":
+      return executeTextTemplateNode(node, input);
     case "filter_keyword":
       return executeFilterKeywordNode(node, input);
     case "condition":
       return executeConditionNode(node, input);
     case "delay":
       return executeDelayNode(node, input);
+    case "agent_task":
+      return executeAgentTaskNode(node, input, userApiKeys);
     case "ai_summarize":
       return executeAiSummarizeNode(node, input, userApiKeys);
     case "send_telegram":

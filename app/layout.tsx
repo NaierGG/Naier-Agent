@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Mono, Noto_Sans_KR } from "next/font/google";
 import type { ReactNode } from "react";
-import "./globals.css";
 
 import { cn } from "@/lib/utils/cn";
+import "./globals.css";
 
 const notoSansKr = Noto_Sans_KR({
   subsets: ["latin"],
@@ -21,8 +21,7 @@ const ibmPlexMono = IBM_Plex_Mono({
 
 export const metadata: Metadata = {
   title: "Naier",
-  description:
-    "한국 투자자를 위한 AI 자동화 워크스페이스"
+  description: "워크플로우와 AI 에이전트를 함께 만드는 자동화 워크스페이스"
 };
 
 export default function RootLayout({
